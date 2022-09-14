@@ -18,17 +18,17 @@ uintptr_t aimentity = 0;
 uintptr_t tmp_aimentity = 0;
 uintptr_t lastaimentity = 0;
 float max = 999.0f;
-float max_dist = 200.0f*40.0f;
+float max_dist = 500.0f*40.0f;
 int team_player = 0;
-float max_fov = 15;
+float max_fov = 10;
 const int toRead = 100;
-int aim = false;
-bool esp = false;
-bool item_glow = false;
-bool player_glow = false;
+int aim = true;
+bool esp = true;
+bool item_glow = true;
+bool player_glow = true;
 extern bool aim_no_recoil;
 bool aiming = false;
-extern float smooth;
+float smooth = 60.0f;
 extern int bone;
 bool thirdperson = false;
 bool chargerifle = false;
@@ -270,6 +270,13 @@ void DoActions()
 					allied_spectators = tmp_all_spec;
 					counter = 0;
 				}
+			}
+
+			if (spectators + allied_spectators >= 1) {
+				smooth = 120.0f;
+			}
+			else {
+				smooth = 60.0f;
 			}
 
 			if(!lock)
@@ -621,7 +628,7 @@ static void set_vars(uint64_t add_addr)
 			client_mem.Read<bool>(item_glow_addr, item_glow);
 			client_mem.Read<bool>(player_glow_addr, player_glow);
 			client_mem.Read<bool>(aim_no_recoil_addr, aim_no_recoil);
-			client_mem.Read<float>(smooth_addr, smooth);
+			// client_mem.Read<float>(smooth_addr, smooth);
 			client_mem.Read<float>(max_fov_addr, max_fov);
 			client_mem.Read<int>(bone_addr, bone);
 			client_mem.Read<bool>(thirdperson_addr, thirdperson);

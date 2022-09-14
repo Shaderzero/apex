@@ -3,7 +3,7 @@
 extern Memory apex_mem;
 
 extern bool firing_range;
-float smooth = 12.0f;
+extern float smooth;
 bool aim_no_recoil = true;
 int bone = 2;
 
