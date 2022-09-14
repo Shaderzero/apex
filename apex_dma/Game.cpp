@@ -3,6 +3,13 @@
 extern Memory apex_mem;
 
 extern bool firing_range;
+//glow color and brigtness
+extern float glowr;
+extern float glowg;
+extern float glowb;
+extern int glowtype;
+extern int glowtype2;
+
 extern float smooth;
 bool aim_no_recoil = true;
 int bone = 2;
@@ -68,9 +75,22 @@ int Entity::getHealth()
 	return *(int*)(buffer + OFFSET_HEALTH);
 }
 
+
+int Entity::getArmortype()
+{
+	int armortype;
+	apex_mem.Read<int>(ptr + OFFSET_ARMOR_TYPE, armortype);
+	return armortype;
+}
+
 int Entity::getShield()
 {
 	return *(int*)(buffer + OFFSET_SHIELD);
+}
+
+int Entity::getMaxshield()
+{
+	return *(int*)(buffer + OFFSET_MAXSHIELD);
 }
 
 Vector Entity::getAbsVelocity()
@@ -250,6 +270,14 @@ bool Item::isItem()
 	get_class_name(ptr, class_name);
 
 	return strncmp(class_name, "CPropSurvival", 13) == 0;
+}
+
+bool Item::isBox()
+{
+	char class_name[33] = {};
+	get_class_name(ptr, class_name);
+
+	return strncmp(class_name, "CDeathBoxProp", 13) == 0;
 }
 
 bool Item::isGlowing()

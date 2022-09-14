@@ -22,7 +22,7 @@ float max_dist = 500.0f*40.0f;
 int team_player = 0;
 float max_fov = 10;
 const int toRead = 100;
-int aim = true;
+int aim = 2;
 bool esp = true;
 bool item_glow = true;
 bool player_glow = true;
@@ -34,6 +34,13 @@ bool thirdperson = false;
 bool chargerifle = false;
 bool shooting = false;
 
+//Player Glow Color and Brightness
+float glowr = 0.0f;
+float glowg = 120.0f;
+float glowb = 120.0f;
+int glowtype = 1;
+int glowtype2 = 2;
+
 bool actions_t = false;
 bool esp_t = false;
 bool aim_t = false;
@@ -41,7 +48,7 @@ bool vars_t = false;
 bool item_t = false;
 uint64_t g_Base;
 uint64_t c_Base;
-bool next = false;
+bool next2 = false;
 bool valid = false;
 bool lock = false;
 
@@ -59,6 +66,11 @@ typedef struct player
 	bool visible = false;
 	int health = 0;
 	int shield = 0;
+	int maxshield = 0;
+	int armortype = 0;
+	Vector EntityPosition;
+	Vector LocalPlayerPosition;
+	QAngle localviewangle;
 	char name[33] = { 0 };
 }player;
 
@@ -262,9 +274,9 @@ void DoActions()
 			}
 			else
 			{
-				//refresh spectators count every ~2 seconds
+				//refresh spectators count every ~1 seconds
 				counter++;
-				if(counter==70)
+				if(counter==40)
 				{
 					spectators = tmp_spec;
 					allied_spectators = tmp_all_spec;
@@ -272,8 +284,8 @@ void DoActions()
 				}
 			}
 
-			if (spectators + allied_spectators >= 1) {
-				smooth = 120.0f;
+			if (tmp_spec + tmp_all_spec >= 1) {
+				smooth = 150.0f;
 			}
 			else {
 				smooth = 60.0f;
@@ -323,8 +335,8 @@ static void EspLoop()
 				apex_mem.Read<uint64_t>(g_Base + OFFSET_LOCAL_ENT, LocalPlayer);
 				if (LocalPlayer == 0)
 				{
-					next = true;
-					while(next && g_Base!=0 && c_Base!=0 && esp)
+					next2 = true;
+					while(next2 && g_Base!=0 && c_Base!=0 && esp)
 					{
 						std::this_thread::sleep_for(std::chrono::milliseconds(1));
 					}
@@ -334,8 +346,8 @@ static void EspLoop()
 				int team_player = LPlayer.getTeamId();
 				if (team_player < 0 || team_player>50)
 				{
-					next = true;
-					while(next && g_Base!=0 && c_Base!=0 && esp)
+					next2 = true;
+					while(next2 && g_Base!=0 && c_Base!=0 && esp)
 					{
 						std::this_thread::sleep_for(std::chrono::milliseconds(1));
 					}
@@ -392,7 +404,7 @@ static void EspLoop()
 						
 						Vector bs = Vector();
 						WorldToScreen(EntityPosition, m.matrix, 5120, 1440, bs);
-						if (bs.x > 0 && bs.y > 0)
+						if (esp)
 						{
 							Vector hs = Vector();
 							Vector HeadPosition = Target.getBonePositionByHitbox(0);
@@ -402,6 +414,8 @@ static void EspLoop()
 							float boxMiddle = bs.x - (width / 2.0f);
 							int health = Target.getHealth();
 							int shield = Target.getShield();
+							int maxshield = Target.getMaxshield();
+							int armortype = Target.getArmortype();
 							players[c] = 
 							{
 								dist,
@@ -415,7 +429,9 @@ static void EspLoop()
 								0,
 								(Target.lastVisTime() > lastvis_esp[c]),
 								health,
-								shield	
+								shield,
+								maxshield,
+								armortype
 							};
 							Target.get_name(g_Base, i-1, &players[c].name[0]);
 							lastvis_esp[c] = Target.lastVisTime();
@@ -467,7 +483,7 @@ static void EspLoop()
 
 						Vector bs = Vector();
 						WorldToScreen(EntityPosition, m.matrix, 5120, 1440, bs);
-						if (bs.x > 0 && bs.y > 0)
+						if (esp)
 						{
 							Vector hs = Vector();
 							Vector HeadPosition = Target.getBonePositionByHitbox(0);
@@ -477,7 +493,11 @@ static void EspLoop()
 							float boxMiddle = bs.x - (width / 2.0f);
 							int health = Target.getHealth();
 							int shield = Target.getShield();
-							
+							int maxshield = Target.getMaxshield();
+							int armortype = Target.getArmortype();
+							Vector EntityPosition = Target.getPosition();
+							Vector LocalPlayerPosition = LPlayer.getPosition();
+							QAngle localviewangle = LPlayer.GetViewAngles();
 							players[i] = 
 							{
 								dist,
@@ -491,7 +511,12 @@ static void EspLoop()
 								Target.isKnocked(),
 								(Target.lastVisTime() > lastvis_esp[i]),
 								health,
-								shield
+								shield,
+								maxshield,
+								armortype,
+								EntityPosition,
+								LocalPlayerPosition,
+								localviewangle
 							};
 							Target.get_name(g_Base, i-1, &players[i].name[0]);
 							lastvis_esp[i] = Target.lastVisTime();
@@ -500,8 +525,8 @@ static void EspLoop()
 					}
 				}
 
-				next = true;
-				while(next && g_Base!=0 && c_Base!=0 && esp)
+				next2 = true;
+				while(next2 && g_Base!=0 && c_Base!=0 && esp)
 				{
 					std::this_thread::sleep_for(std::chrono::milliseconds(1));
 				}
@@ -593,7 +618,18 @@ static void set_vars(uint64_t add_addr)
 	client_mem.Read<uint64_t>(add_addr + sizeof(uint64_t)*18, chargerifle_addr);
 	uint64_t shooting_addr = 0;
 	client_mem.Read<uint64_t>(add_addr + sizeof(uint64_t)*19, shooting_addr);
-	
+	uint64_t glowr_addr = 0;
+	client_mem.Read<uint64_t>(add_addr + sizeof(uint64_t)*20, glowr_addr);
+	uint64_t glowg_addr = 0;
+	client_mem.Read<uint64_t>(add_addr + sizeof(uint64_t)*21, glowg_addr);
+	uint64_t glowb_addr = 0;
+	client_mem.Read<uint64_t>(add_addr + sizeof(uint64_t)*22, glowb_addr);
+	uint64_t firing_range_addr = 0;
+	client_mem.Read<uint64_t>(add_addr + sizeof(uint64_t)*23, firing_range_addr);
+	uint64_t glowtype_addr = 0;
+	client_mem.Read<uint64_t>(add_addr + sizeof(uint64_t)*24, glowtype_addr);
+	uint64_t glowtype2_addr = 0;
+	client_mem.Read<uint64_t>(add_addr + sizeof(uint64_t)*25, glowtype2_addr);
 
 	uint32_t check = 0;
 	client_mem.Read<uint32_t>(check_addr, check);
@@ -634,27 +670,38 @@ static void set_vars(uint64_t add_addr)
 			client_mem.Read<bool>(thirdperson_addr, thirdperson);
 			client_mem.Read<bool>(shooting_addr, shooting);
 			client_mem.Read<bool>(chargerifle_addr, chargerifle);
+			client_mem.Read<float>(glowr_addr, glowr);
+			client_mem.Read<float>(glowg_addr, glowg);
+			client_mem.Read<float>(glowb_addr, glowb);
+			client_mem.Read<bool>(firing_range_addr, firing_range);
+			client_mem.Read<int>(glowtype_addr, glowtype);
+			client_mem.Read<int>(glowtype2_addr, glowtype2);
 
-			if(esp && next)
+			if(esp && next2)
 			{
 				if(valid)
-					client_mem.WriteArray<player>(player_addr, players, toRead);
+				client_mem.WriteArray<player>(player_addr, players, toRead);
 				client_mem.Write<bool>(valid_addr, valid);
-				client_mem.Write<bool>(next_addr, true); //next
+				client_mem.Write<bool>(next_addr, true); //next2
 
-				bool next_val = false;
+				bool next2_val = false;
 				do
 				{
-					client_mem.Read<bool>(next_addr, next_val);
+					client_mem.Read<bool>(next_addr, next2_val);
 					std::this_thread::sleep_for(std::chrono::milliseconds(1));
-				} while (next_val && g_Base!=0 && c_Base!=0);
+				} while (next2_val && g_Base!=0 && c_Base!=0);
 				
-				next = false;
+				next2 = false;
 			}
 		}
 	}
 	vars_t = false;
 }
+
+// Item Glow Stuff
+struct GlowMode {
+	int8_t GeneralGlowMode, BorderGlowMode, BorderSize, TransparentLevel;
+};
 
 static void item_glow_t()
 {
@@ -669,12 +716,21 @@ static void item_glow_t()
 			uint64_t entitylist = g_Base + OFFSET_ENTITYLIST;
 			if (item_glow)
 			{
-				for (int i = 0; i < 10000; i++)
+				for (int i = 0; i < 20000; i++)
 				{
 					uint64_t centity = 0;
 					apex_mem.Read<uint64_t>(entitylist + ((uint64_t)i << 5), centity);
 					if (centity == 0) continue;
 					Item item = getItem(centity);
+
+					if (item.isBox())
+					{
+						apex_mem.Write<int>(centity + 0x262, 16256);
+						apex_mem.Write<int>(centity + 0x2dc, 1193322764);
+						apex_mem.Write<int>(centity + 0x3c8, 7);
+						apex_mem.Write<int>(centity + 0x3d0, 2);
+						
+					}
 
 					if(item.isItem() && !item.isGlowing())
 					{
@@ -688,7 +744,7 @@ static void item_glow_t()
 			{		
 				if(k==1)
 				{
-					for (int i = 0; i < 10000; i++)
+					for (int i = 0; i < 20000; i++)
 					{
 						uint64_t centity = 0;
 						apex_mem.Read<uint64_t>(entitylist + ((uint64_t)i << 5), centity);
