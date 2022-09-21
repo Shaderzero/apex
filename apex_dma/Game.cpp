@@ -342,20 +342,6 @@ QAngle CalculateBestBoneAim(Entity& from, uintptr_t t, float max_fov)
 		max_fov *= zoom_fov/90.0f;
 	}
 
-	/*
-	//simple aim prediction
-	if (BulletSpeed > 1.f)
-	{
-		Vector LocalBonePosition = from.getBonePosition(bone);
-		float VerticalTime = TargetBonePosition.DistTo(LocalBonePosition) / BulletSpeed;
-		TargetBonePosition.z += (BulletGrav * 0.5f) * (VerticalTime * VerticalTime);
-
-		float HorizontalTime = TargetBonePosition.DistTo(LocalBonePosition) / BulletSpeed;
-		TargetBonePosition += (target.getAbsVelocity() * HorizontalTime);
-	}
-	*/
-	
-	//more accurate prediction
 	if (BulletSpeed > 1.f)
 	{
 		PredictCtx Ctx;
@@ -387,6 +373,73 @@ QAngle CalculateBestBoneAim(Entity& from, uintptr_t t, float max_fov)
 	Math::NormalizeAngles(Delta);
 
 	QAngle SmoothedAngles = ViewAngles + Delta/smooth;
+	return SmoothedAngles;
+}
+
+QAngle CalculateBestBoneAim2(Entity& from, uintptr_t t, float max_fov, int rBone, float rSmooth)
+{
+	Entity target = getEntity(t);
+	if(firing_range)
+	{
+		if (!target.isAlive())
+		{
+			return QAngle(0, 0, 0);
+		}
+	}
+	else
+	{
+		if (!target.isAlive() || target.isKnocked())
+		{
+			return QAngle(0, 0, 0);
+		}
+	}
+	
+	Vector LocalCamera = from.GetCamPos();
+	Vector TargetBonePosition = target.getBonePositionByHitbox(rBone);
+	QAngle CalculatedAngles = QAngle(0, 0, 0);
+	
+	WeaponXEntity curweap = WeaponXEntity();
+	curweap.update(from.ptr);
+	float BulletSpeed = curweap.get_projectile_speed();
+	float BulletGrav = curweap.get_projectile_gravity();
+	float zoom_fov = curweap.get_zoom_fov();
+
+	if (zoom_fov != 0.0f && zoom_fov != 1.0f)
+	{
+		max_fov *= zoom_fov/90.0f;
+	}
+
+	if (BulletSpeed > 1.f)
+	{
+		PredictCtx Ctx;
+		Ctx.StartPos = LocalCamera;
+		Ctx.TargetPos = TargetBonePosition; 
+		Ctx.BulletSpeed = BulletSpeed - (BulletSpeed*0.08);
+		Ctx.BulletGravity = BulletGrav + (BulletGrav*0.05);
+		Ctx.TargetVel = target.getAbsVelocity();
+
+		if (BulletPredict(Ctx))
+			CalculatedAngles = QAngle{Ctx.AimAngles.x, Ctx.AimAngles.y, 0.f};
+    }
+
+	if (CalculatedAngles == QAngle(0, 0, 0))
+    	CalculatedAngles = Math::CalcAngle(LocalCamera, TargetBonePosition);
+	QAngle ViewAngles = from.GetViewAngles();
+	QAngle SwayAngles = from.GetSwayAngles();
+	//remove sway and recoil
+	if(aim_no_recoil)
+		CalculatedAngles-=SwayAngles-ViewAngles;
+	Math::NormalizeAngles(CalculatedAngles);
+	QAngle Delta = CalculatedAngles - ViewAngles;
+	double fov = Math::GetFov(SwayAngles, CalculatedAngles);
+	if (fov > max_fov)
+	{
+		return QAngle(0, 0, 0);
+	}
+
+	Math::NormalizeAngles(Delta);
+
+	QAngle SmoothedAngles = ViewAngles + Delta/rSmooth;
 	return SmoothedAngles;
 }
 

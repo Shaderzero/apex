@@ -85,6 +85,34 @@ float lastvis_aim[toRead];
 int tmp_spec = 0, spectators = 0;
 int tmp_all_spec = 0, allied_spectators = 0;
 
+//random bone
+int boneArray[5] = { 2, 3, 5, 7, 8};
+int rBone(){
+  int randVal = rand() % 5;
+  return boneArray[randVal];
+}
+
+//random sleep
+int sleepArray[5] = { 200, 300, 500, 700, 800};
+int rSleep(){
+  int randVal = rand() % 5;
+  return sleepArray[randVal];
+}
+
+//random delay
+int delayArray[5] = { 1, 2, 3, 4, 5};
+int rDelay(){
+  int randVal = rand() % 5;
+  return delayArray[randVal];
+}
+
+//random smooth
+float smoothArray[5] = { 30.0f, 50.0f, 60.0f, 70.0f, 80.0f};
+float rSmooth(){
+  int randVal = rand() % 5;
+  return smoothArray[randVal];
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ProcessPlayer(Entity& LPlayer, Entity& target, uint64_t entitylist, int index)
@@ -282,13 +310,6 @@ void DoActions()
 					allied_spectators = tmp_all_spec;
 					counter = 0;
 				}
-			}
-
-			if (tmp_spec + tmp_all_spec >= 1) {
-				smooth = 150.0f;
-			}
-			else {
-				smooth = 60.0f;
 			}
 
 			if(!lock)
@@ -539,14 +560,32 @@ static void EspLoop()
 static void AimbotLoop()
 {
 	aim_t = true;
+	int aimBone = 2;
+	int aimDelay = 0;
+	float aimSmooth = 60.0f;
+	int boneTimer = 0;
+	int smoothTimer = 0;
+	int boneDelay = rSleep();
+	int smoothDelay = rSleep();
 	while (aim_t)
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		while (g_Base!=0 && c_Base!=0)
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			if (aimDelay >= 500)
+				{
+					aimDelay = 0;
+					if (tmp_spec + tmp_all_spec >= 1)
+					{
+						std::this_thread::sleep_for(std::chrono::milliseconds(smoothDelay));
+					}
+				}
 			if (aim>0)
 			{
+				boneTimer++;
+				smoothTimer++;
+				aimDelay++;
 				if (aimentity == 0 || !aiming)
 				{
 					lock=false;
@@ -559,7 +598,36 @@ static void AimbotLoop()
 				apex_mem.Read<uint64_t>(g_Base + OFFSET_LOCAL_ENT, LocalPlayer);
 				if (LocalPlayer == 0) continue;
 				Entity LPlayer = getEntity(LocalPlayer);
-				QAngle Angles = CalculateBestBoneAim(LPlayer, aimentity, max_fov);
+				if (boneTimer >= boneDelay)
+				{
+					aimBone = rBone();
+					if (aimBone == 8)
+					{
+						boneDelay = 200;
+					}
+					else
+					{
+						boneDelay = rSleep();
+					}
+					boneTimer = 0;
+				}
+				if (smoothTimer >= smoothDelay)
+				{
+					aimSmooth = rSmooth();
+					smoothTimer = 0;
+					smoothDelay = rSleep();
+				}
+				if (tmp_spec + tmp_all_spec >= 1)
+				{
+					aimSmooth = aimSmooth * 3;
+					max_fov = 5;
+				}
+				else
+				{
+					max_fov = 10;
+				}
+				
+				QAngle Angles = CalculateBestBoneAim2(LPlayer, aimentity, max_fov, aimBone, aimSmooth);
 				if (Angles.x == 0 && Angles.y == 0)
 				{
 					lock=false;
@@ -778,7 +846,7 @@ int main(int argc, char *argv[])
 	//const char* ap_proc = "EasyAntiCheat_launcher.exe";
 
 	//Client "add" offset
-	uint64_t add_off = 0x1de5d0;
+	uint64_t add_off = 0x1e1650;
 
 	std::thread aimbot_thr;
 	std::thread esp_thr;
