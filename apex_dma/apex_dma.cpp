@@ -107,7 +107,7 @@ int rDelay(){
 }
 
 //random smooth
-float smoothArray[5] = { 30.0f, 50.0f, 60.0f, 70.0f, 80.0f};
+float smoothArray[5] = { 50.0f, 60.0f, 70.0f, 80.0f, 90.0f};
 float rSmooth(){
   int randVal = rand() % 5;
   return smoothArray[randVal];
@@ -619,7 +619,7 @@ static void AimbotLoop()
 				}
 				if (tmp_spec + tmp_all_spec >= 1)
 				{
-					aimSmooth = aimSmooth * 3;
+					aimSmooth = 120.0f;
 					max_fov = 5;
 				}
 				else
