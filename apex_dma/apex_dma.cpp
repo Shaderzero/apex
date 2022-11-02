@@ -424,12 +424,12 @@ static void EspLoop()
 						}
 						
 						Vector bs = Vector();
-						WorldToScreen(EntityPosition, m.matrix, 5120, 1440, bs);
+						WorldToScreen(EntityPosition, m.matrix, 2560, 1440, bs);
 						if (esp)
 						{
 							Vector hs = Vector();
 							Vector HeadPosition = Target.getBonePositionByHitbox(0);
-							WorldToScreen(HeadPosition, m.matrix, 5120, 1440, hs);
+							WorldToScreen(HeadPosition, m.matrix, 2560, 1440, hs);
 							float height = abs(abs(hs.y) - abs(bs.y));
 							float width = height / 2.0f;
 							float boxMiddle = bs.x - (width / 2.0f);
@@ -503,12 +503,12 @@ static void EspLoop()
 						}
 
 						Vector bs = Vector();
-						WorldToScreen(EntityPosition, m.matrix, 5120, 1440, bs);
+						WorldToScreen(EntityPosition, m.matrix, 2560, 1440, bs);
 						if (esp)
 						{
 							Vector hs = Vector();
 							Vector HeadPosition = Target.getBonePositionByHitbox(0);
-							WorldToScreen(HeadPosition, m.matrix, 5120, 1440, hs);
+							WorldToScreen(HeadPosition, m.matrix, 2560, 1440, hs);
 							float height = abs(abs(hs.y) - abs(bs.y));
 							float width = height / 2.0f;
 							float boxMiddle = bs.x - (width / 2.0f);
