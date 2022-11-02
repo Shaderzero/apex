@@ -159,15 +159,16 @@ Vector Entity::getBonePositionByHitbox(int id)
 	apex_mem.Read<uint64_t>(Model + 0x8, StudioHdr);
  
     //get hitbox array
-	int HitBoxsArray_set;
-	apex_mem.Read<int>(StudioHdr + 0xB4,HitBoxsArray_set);
-	uint64_t HitBoxsArray = StudioHdr + HitBoxsArray_set;
+	uint16_t HitboxCache;
+	apex_mem.Read<uint16_t>(StudioHdr + 0x34, HitboxCache);
+	uint64_t HitboxArray = StudioHdr + ((uint16_t)(HitboxCache & 0xFFFE) << (4 * (HitboxCache & 1)));
  
-	int HitboxIndex;
-	apex_mem.Read<int>(HitBoxsArray + 0x8, HitboxIndex);
+	uint16_t  IndexCache;
+	apex_mem.Read<uint16_t>(HitboxArray + 0x4, IndexCache);
+	int HitboxIndex = ((uint16_t)(IndexCache & 0xFFFE) << (4 * (IndexCache & 1)));
  
-	int Bone;
-	apex_mem.Read<int>(HitBoxsArray + HitboxIndex + (id * 0x2C), Bone);
+	uint16_t  Bone;
+	apex_mem.Read<uint16_t>(HitboxIndex + HitboxArray + (id * 0x20), Bone);
 
 	if(Bone < 0 || Bone > 255)
 		return Vector();
@@ -329,6 +330,7 @@ QAngle CalculateBestBoneAim(Entity& from, uintptr_t t, float max_fov)
 	
 	Vector LocalCamera = from.GetCamPos();
 	Vector TargetBonePosition = target.getBonePositionByHitbox(bone);
+	TargetBonePosition.z+=50;
 	QAngle CalculatedAngles = QAngle(0, 0, 0);
 	
 	WeaponXEntity curweap = WeaponXEntity();
